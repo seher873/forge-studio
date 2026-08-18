@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Hammer, Terminal } from "lucide-react";
 import { useProjects } from "@/lib/store";
-import { UserSwitcher } from "@/components/dashboard/UserSwitcher";
 
 export function DashboardHeader() {
   const { activeUser } = useProjects();
@@ -33,7 +32,6 @@ export function DashboardHeader() {
               Wrap
             </Link>
           ) : null}
-          <UserSwitcher />
         </div>
       </div>
     </header>

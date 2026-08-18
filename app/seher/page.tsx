@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   ChevronDown,
@@ -17,12 +17,13 @@ import {
   PanelRightOpen,
   ShieldOff,
   Terminal,
+  FolderUp,
   X,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useProjects } from "@/lib/store";
-import { Button } from "@/components/ui/button";
 
 const KEY_STORAGE = "forge-wrap-key";
 
@@ -92,23 +93,25 @@ function FileTree({ entries, level, onSelect, selected }: {
                 onSelect(entry.path);
               }
             }}
-            className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-[11px] transition-colors hover:bg-[#1a1a1a] ${
-              selected === entry.path ? "bg-[#1a1a1a] text-[#00ff88]" : "text-[#777]"
+            className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-mono transition-all hover:bg-white/[0.04] ${
+              selected === entry.path
+                ? "bg-cyan-400/[0.08] text-cyan-400"
+                : "text-zinc-500 hover:text-zinc-300"
             }`}
-            style={{ paddingLeft: `${level * 12 + 4}px` }}
+            style={{ paddingLeft: `${level * 12 + 8}px` }}
           >
             {entry.type === "dir" ? (
               <>
                 {expanded[entry.path] ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-                {expanded[entry.path] ? <FolderOpen className="h-3 w-3 shrink-0 text-[#febc2e]" /> : <Folder className="h-3 w-3 shrink-0 text-[#febc2e]" />}
+                {expanded[entry.path] ? <FolderOpen className="h-3 w-3 shrink-0 text-amber-400" /> : <Folder className="h-3 w-3 shrink-0 text-amber-400" />}
               </>
             ) : (
               <>
                 <span className="w-3" />
                 {entry.name.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i) ? (
-                  <ImageIcon className="h-3 w-3 shrink-0 text-[#6d8bff]" />
+                  <ImageIcon className="h-3 w-3 shrink-0 text-violet-400" />
                 ) : (
-                  <FileText className="h-3 w-3 shrink-0 text-[#555]" />
+                  <FileText className="h-3 w-3 shrink-0 text-zinc-600" />
                 )}
               </>
             )}
@@ -145,6 +148,7 @@ export default function WrapPage() {
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const modelDropRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -203,16 +207,17 @@ export default function WrapPage() {
       if (f.size > MAX) continue;
       const isImage = f.type.startsWith("image/");
       const isText = f.type.startsWith("text/") || /\.(ts|tsx|js|jsx|json|md|css|html|py|rb|go|rs|java|c|cpp|h|sh|yaml|yml|toml|env|sql|graphql|prisma)$/i.test(f.name);
+      const displayName = (f as any).webkitRelativePath || f.name;
       if (isText) {
         const text = await f.text();
-        added.push({ name: f.name, type: "text", content: text });
+        added.push({ name: displayName, type: "text", content: text });
       } else if (isImage) {
         const b64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(f);
         });
-        added.push({ name: f.name, type: "image", content: b64 });
+        added.push({ name: displayName, type: "image", content: b64 });
       }
     }
     setFiles((prev) => [...prev, ...added]);
@@ -313,169 +318,214 @@ export default function WrapPage() {
 
   if (!isMasterAdmin) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="text-center">
-          <p className="font-mono text-sm text-[#ff3333]">ACCESS DENIED</p>
-          <p className="mt-2 font-mono text-xs text-[#555]">This terminal is restricted to the operator.</p>
-          <Link href="/" className="mt-4 inline-block font-mono text-xs text-[#00ff88] hover:underline">
+      <div className="holo-bg flex min-h-screen items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-panel mx-4 flex flex-col items-center rounded-2xl border border-white/[0.06] bg-white/[0.02] px-12 py-16 text-center backdrop-blur-xl"
+        >
+          <ShieldOff className="mb-6 h-12 w-12 text-red-400/60" />
+          <p className="font-mono text-sm font-semibold tracking-wide text-red-400/80">ACCESS DENIED</p>
+          <p className="mt-2 font-mono text-xs text-zinc-600">This terminal is restricted to the operator.</p>
+          <Link
+            href="/"
+            className="glass-btn mt-6 inline-flex items-center gap-2 rounded-lg px-4 py-2 font-mono text-xs text-cyan-400/80 transition-all hover:text-cyan-400"
+          >
             &lt;- return to dashboard
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[#0a0a0a] text-[#b0b0b0] font-mono">
-      {/* Terminal title bar */}
-      <header className="flex items-center justify-between border-b border-[#1a1a1a] bg-[#0f0f0f] px-4 py-2">
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-            <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
-            <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+    <div className="holo-bg flex h-screen flex-col font-mono text-zinc-300">
+      {/* Header */}
+      <header className="glass-header flex items-center justify-between px-5 py-2.5">
+        <div className="flex items-center gap-4">
+          <div className="orbital">
+            <div className="orbital-ring" />
+            <div className="orbital-ring" />
+            <div className="orbital-dot" />
+            <div className="orbital-dot" />
+            <div className="orbital-dot" />
+            <div className="orbital-nucleus" />
           </div>
-          <span className="text-xs text-[#555]">seher-agent — terminal</span>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400/60" />
+            <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Seher Agent</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setShowFiles(!showFiles); if (!showFiles) fetchFiles(); }}
-            className={`text-xs transition-colors ${showFiles ? "text-[#00ff88]" : "text-[#555] hover:text-[#00ff88]"}`}
+            className={`glass-btn flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] transition-all ${showFiles ? "text-cyan-400" : "text-zinc-500 hover:text-cyan-400"}`}
           >
-            {showFiles ? <PanelRightClose className="inline h-3.5 w-3.5" /> : <PanelRightOpen className="inline h-3.5 w-3.5" />}
-            {" "}files
+            {showFiles ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
+            files
           </button>
-          <Link href="/" className="text-xs text-[#555] transition-colors hover:text-[#00ff88]">
+          <Link href="/" className="glass-btn flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] text-zinc-500 transition-all hover:text-cyan-400">
             &lt;- dashboard
           </Link>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Terminal panel */}
+        {/* Main chat area */}
         <div className="flex min-h-0 flex-1 flex-col">
-          {/* Terminal output */}
           <div ref={scrollRef} className="flex-1 overflow-auto px-4 py-4">
-        {history.length === 0 && !running && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-2"
-          >
-            <p className="text-[#00ff88]">seher-agent v1.0</p>
-            <p className="text-[#444]">Type your prompt and press Enter. Esc to cancel.</p>
-            <p className="text-[#444]">Attach files with the clip icon below.</p>
-            <p className="text-[#333]">─────────────────────────────────────────</p>
-          </motion.div>
-        )}
+            {history.length === 0 && !running && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="flex flex-col items-center justify-center py-20"
+              >
+                  <div className="holo-orb mx-auto mb-8 h-28 w-28">
+                    <img src="/image.png" alt="avatar" />
+                  </div>
+                <h1 className="text-lg font-semibold tracking-wide text-zinc-300">
+                  SEHER <span className="text-cyan-400/70">AGENT</span>
+                </h1>
+                <p className="mt-2 text-xs text-zinc-600">Type your prompt and press Enter. Esc to cancel.</p>
+                <p className="mt-1 text-xs text-zinc-600">Attach files with the clip icon below.</p>
+              </motion.div>
+            )}
 
-        {history.map((entry, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-3"
-          >
-            {entry.role === "user" ? (
-              <div className="flex gap-2">
-                <span className="shrink-0 text-[#00ff88]">$</span>
-                <span className="text-[#e0e0e0] whitespace-pre-wrap">{entry.text}</span>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <span className="shrink-0 text-[#6d8bff]">&gt;</span>
-                <div className="min-w-0 flex-1">
-                  <pre className="whitespace-pre-wrap break-words text-[#b0b0b0] text-xs leading-relaxed">{entry.text}</pre>
+            {history.map((entry, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-3"
+              >
+                {entry.role === "user" ? (
+                  <div className="glass-panel-user rounded-xl px-4 py-3">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400/60">You</span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-zinc-300">{entry.text}</p>
+                  </div>
+                ) : (
+                  <div className="glass-panel-agent rounded-xl px-4 py-3">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-violet-400/60" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-violet-400/60">Agent</span>
+                      <button
+                        onClick={() => copy(entry.text)}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-zinc-600 transition-colors hover:bg-white/[0.04] hover:text-zinc-400"
+                      >
+                        {copied ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
+                        {copied ? "copied" : "copy"}
+                      </button>
+                    </div>
+                    <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-400">{entry.text}</pre>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+
+            {running && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-3 flex items-center gap-3 rounded-xl border border-violet-400/[0.08] bg-violet-400/[0.04] px-4 py-3"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-violet-400/50" />
+                <div className="holo-dots flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                </div>
+                <span className="text-[11px] text-zinc-600">thinking...</span>
+              </motion.div>
+            )}
+          </div>
+        </div>
+
+        {/* File sidebar */}
+        <AnimatePresence>
+          {showFiles && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 256, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="glass-sidebar flex h-full shrink-0 flex-col overflow-hidden border-l border-white/[0.04]"
+            >
+              <div className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-600">Files</span>
+                <div className="flex gap-2">
                   <button
-                    onClick={() => copy(entry.text)}
-                    className="mt-1 inline-flex items-center gap-1 text-[10px] text-[#444] transition-colors hover:text-[#00ff88]"
+                    onClick={() => setFileSort("recent")}
+                    className={`text-[10px] transition-colors ${fileSort === "recent" ? "text-cyan-400" : "text-zinc-600 hover:text-zinc-400"}`}
                   >
-                    {copied ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
-                    {copied ? "copied" : "copy"}
+                    recent
+                  </button>
+                  <button
+                    onClick={() => setFileSort("alpha")}
+                    className={`text-[10px] transition-colors ${fileSort === "alpha" ? "text-cyan-400" : "text-zinc-600 hover:text-zinc-400"}`}
+                  >
+                    A-Z
+                  </button>
+                  <button onClick={fetchFiles} className="text-[10px] text-zinc-600 hover:text-cyan-400">↻</button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-1.5">
+                <FileTree entries={fileTree} level={0} onSelect={openFile} selected={selectedFile ?? ""} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* File preview */}
+        <AnimatePresence>
+          {selectedFile && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 384, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="glass-sidebar flex h-full shrink-0 flex-col overflow-hidden border-l border-white/[0.04]"
+            >
+              <div className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2">
+                <span className="truncate text-[11px] text-zinc-500">{selectedFile}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { if (fileContent) navigator.clipboard.writeText(fileContent); }}
+                    className="text-zinc-600 transition-colors hover:text-cyan-400"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => { setSelectedFile(null); setFileContent(null); }} className="text-zinc-600 transition-colors hover:text-red-400">
+                    <X className="h-3 w-3" />
                   </button>
                 </div>
               </div>
-            )}
-          </motion.div>
-        ))}
-
-        {running && (
-          <div className="flex gap-2 text-[#555]">
-            <span className="shrink-0 text-[#febc2e]">~</span>
-            <span className="animate-pulse">processing<span className="animate-[dots_1.5s_steps(4,end)_infinite]">...</span></span>
-          </div>
-        )}
-        </div>
-        </div>
-
-        {/* File browser sidebar */}
-        {showFiles && (
-          <div className="flex h-full w-64 shrink-0 flex-col border-l border-[#1a1a1a] bg-[#0d0d0d]">
-            <div className="flex items-center justify-between border-b border-[#1a1a1a] px-3 py-2">
-              <span className="text-[11px] text-[#555]">FILES</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFileSort("recent")}
-                  className={`text-[10px] transition-colors ${fileSort === "recent" ? "text-[#00ff88]" : "text-[#444] hover:text-[#777]"}`}
-                >
-                  recent
-                </button>
-                <button
-                  onClick={() => setFileSort("alpha")}
-                  className={`text-[10px] transition-colors ${fileSort === "alpha" ? "text-[#00ff88]" : "text-[#444] hover:text-[#777]"}`}
-                >
-                  A-Z
-                </button>
-                <button onClick={fetchFiles} className="text-[10px] text-[#444] hover:text-[#00ff88]">↻</button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto p-1">
-              <FileTree entries={fileTree} level={0} onSelect={openFile} selected={selectedFile ?? ""} />
-            </div>
-          </div>
-        )}
-
-        {/* File preview panel */}
-        {selectedFile && (
-          <div className="flex h-full w-96 shrink-0 flex-col border-l border-[#1a1a1a] bg-[#0a0a0a]">
-            <div className="flex items-center justify-between border-b border-[#1a1a1a] px-3 py-2">
-              <span className="truncate text-[11px] text-[#777]">{selectedFile}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { if (fileContent) navigator.clipboard.writeText(fileContent); }}
-                  className="text-[10px] text-[#444] hover:text-[#00ff88]"
-                >
-                  <Copy className="h-3 w-3" />
-                </button>
-                <button onClick={() => { setSelectedFile(null); setFileContent(null); }} className="text-[#444] hover:text-[#ff5f57]">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words px-3 py-2 text-[11px] leading-relaxed text-[#999]">
-              {fileContent ?? "Loading..."}
-            </pre>
-          </div>
-        )}
+              <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words px-3 py-2 text-[11px] leading-relaxed text-zinc-500">
+                {fileContent ?? "Loading..."}
+              </pre>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Input area */}
-      <div className="border-t border-[#1a1a1a] bg-[#0f0f0f] px-4 py-3">
-        {/* File chips */}
+      <div className="glass-input-area px-4 py-3">
         {files.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1">
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {files.map((f, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded border border-[#1a1a1a] bg-[#0a0a0a] px-1.5 py-0.5 text-[10px] text-[#555]">
+              <span key={i} className="holo-chip inline-flex items-center gap-1.5 px-2 py-1 text-[10px] text-zinc-500">
                 {f.type === "image" ? <ImageIcon className="h-2.5 w-2.5" /> : <FileText className="h-2.5 w-2.5" />}
                 {f.name}
-                <button onClick={() => removeFile(i)} className="ml-0.5 hover:text-[#ff5f57]"><X className="h-2.5 w-2.5" /></button>
+                <button onClick={() => removeFile(i)} className="ml-0.5 transition-colors hover:text-red-400"><X className="h-2.5 w-2.5" /></button>
               </span>
             ))}
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          <span className="shrink-0 pb-2 text-sm text-[#00ff88]">$</span>
+        <div className="glow-input flex items-end gap-2 px-3 py-2.5">
           <textarea
             ref={textareaRef}
             value={prompt}
@@ -489,10 +539,10 @@ export default function WrapPage() {
             placeholder={running ? "waiting for response..." : "type your prompt..."}
             rows={2}
             disabled={running}
-            className="flex-1 resize-none bg-transparent font-mono text-sm text-[#e0e0e0] placeholder:text-[#333] focus:outline-none disabled:opacity-50"
+            className="flex-1 resize-none bg-transparent font-mono text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none disabled:opacity-50"
           />
 
-          <div className="flex items-center gap-1.5 pb-1.5">
+          <div className="flex items-center gap-1 pb-0.5">
             <input
               ref={fileInputRef}
               type="file"
@@ -501,38 +551,51 @@ export default function WrapPage() {
               className="hidden"
               onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
             />
+            <input
+              ref={folderInputRef}
+              type="file"
+              {...{ webkitdirectory: "" } as any}
+              className="hidden"
+              onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
+            />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="rounded p-1.5 text-[#444] transition-colors hover:bg-[#1a1a1a] hover:text-[#00ff88]"
+              className="glass-btn rounded-lg p-2 text-zinc-600 transition-all hover:text-cyan-400"
               title="Attach files"
             >
               <Paperclip className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => folderInputRef.current?.click()}
+              className="glass-btn rounded-lg p-2 text-zinc-600 transition-all hover:text-cyan-400"
+              title="Upload folder"
+            >
+              <FolderUp className="h-4 w-4" />
+            </button>
 
-            {/* Model selector */}
             <div ref={modelDropRef} className="relative">
               <button
                 onClick={() => setShowModels(!showModels)}
-                className="rounded p-1.5 text-[#444] transition-colors hover:bg-[#1a1a1a] hover:text-[#6d8bff]"
+                className="glass-btn rounded-lg p-2 text-zinc-600 transition-all hover:text-violet-400"
                 title={model || "Select model"}
               >
                 <Terminal className="h-4 w-4" />
               </button>
               {showModels && (
-                <div className="absolute bottom-full right-0 mb-2 w-72 max-h-60 overflow-auto rounded border border-[#1a1a1a] bg-[#0f0f0f] shadow-xl">
-                  <div className="sticky top-0 border-b border-[#1a1a1a] bg-[#0a0a0a] p-2">
+                <div className="absolute bottom-full right-0 mb-2 w-72 max-h-60 overflow-auto rounded-xl border border-white/[0.06] bg-[#0a0e16]/90 shadow-2xl backdrop-blur-xl">
+                  <div className="sticky top-0 border-b border-white/[0.04] bg-[#0a0e16]/80 p-2 backdrop-blur-md">
                     <input
                       value={modelSearch}
                       onChange={(e) => setModelSearch(e.target.value)}
                       placeholder="search models..."
                       autoFocus
-                      className="w-full bg-transparent font-mono text-xs text-[#e0e0e0] placeholder:text-[#333] focus:outline-none"
+                      className="w-full bg-transparent font-mono text-xs text-zinc-300 placeholder:text-zinc-600 focus:outline-none"
                     />
                   </div>
                   <div className="p-1">
                     <button
                       onClick={() => { setModel(""); setModelSearch(""); setShowModels(false); }}
-                      className={`w-full rounded px-2 py-1 text-left text-[11px] transition-colors hover:bg-[#1a1a1a] ${!model ? "text-[#00ff88]" : "text-[#555]"}`}
+                      className={`w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-white/[0.04] ${!model ? "text-cyan-400" : "text-zinc-500"}`}
                     >
                       default (server configured)
                     </button>
@@ -543,7 +606,7 @@ export default function WrapPage() {
                         <button
                           key={m}
                           onClick={() => { setModel(m); setModelSearch(""); setShowModels(false); }}
-                          className={`w-full rounded px-2 py-1 text-left text-[11px] transition-colors hover:bg-[#1a1a1a] ${m === model ? "text-[#00ff88]" : "text-[#555]"}`}
+                          className={`w-full rounded-lg px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-white/[0.04] ${m === model ? "text-cyan-400" : "text-zinc-500"}`}
                         >
                           {m}
                         </button>
@@ -553,18 +616,17 @@ export default function WrapPage() {
               )}
             </div>
 
-            {/* Access key */}
             <div className="relative group">
-              <button className="rounded p-1.5 text-[#444] transition-colors hover:bg-[#1a1a1a] hover:text-[#febc2e]" title="Access key">
+              <button className="glass-btn rounded-lg p-2 text-zinc-600 transition-all hover:text-amber-400" title="Access key">
                 <Lock className="h-4 w-4" />
               </button>
-              <div className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-56 rounded border border-[#1a1a1a] bg-[#0f0f0f] p-2 shadow-xl">
+              <div className="invisible group-hover:visible absolute bottom-full right-0 mb-2 w-56 rounded-xl border border-white/[0.06] bg-[#0a0e16]/90 p-2 shadow-2xl backdrop-blur-xl">
                 <input
                   type="password"
                   value={accessKey}
                   onChange={(e) => setAccessKey(e.target.value)}
                   placeholder="access key (optional)"
-                  className="w-full rounded border border-[#1a1a1a] bg-[#0a0a0a] px-2 py-1 font-mono text-[10px] text-[#e0e0e0] placeholder:text-[#333] focus:border-[#00ff88] focus:outline-none"
+                  className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5 font-mono text-[10px] text-zinc-300 placeholder:text-zinc-600 focus:border-cyan-400/30 focus:outline-none"
                 />
               </div>
             </div>
@@ -572,7 +634,7 @@ export default function WrapPage() {
             {running ? (
               <button
                 onClick={cancel}
-                className="rounded p-1.5 text-[#ff5f57] transition-colors hover:bg-[#1a1a1a]"
+                className="glass-btn rounded-lg p-2 text-red-400 transition-all hover:bg-red-400/10"
                 title="Cancel (Esc)"
               >
                 <XCircle className="h-4 w-4" />
@@ -581,7 +643,7 @@ export default function WrapPage() {
               <button
                 onClick={run}
                 disabled={!prompt.trim()}
-                className="rounded p-1.5 text-[#00ff88] transition-colors hover:bg-[#1a1a1a] disabled:opacity-30"
+                className="glass-btn rounded-lg p-2 text-cyan-400 transition-all hover:bg-cyan-400/10 disabled:opacity-20"
                 title="Send (Enter)"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
@@ -590,7 +652,7 @@ export default function WrapPage() {
           </div>
         </div>
 
-        <div className="mt-1.5 flex items-center justify-between text-[10px] text-[#333]">
+        <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-zinc-600">
           <span>Enter send · Esc cancel · Shift+Enter newline</span>
           <span>{model || "default model"} · {files.length > 0 ? `${files.length} file(s)` : "no files"}</span>
         </div>

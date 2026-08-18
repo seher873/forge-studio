@@ -21,6 +21,10 @@ yarn-error.log*
 .env
 .env*.local
 
+# local only
+/start-agent.bat
+/public/image.png
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
