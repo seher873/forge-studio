@@ -1,13 +1,26 @@
 {
-  "name": "forge-studio",
+  "name": "magic-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Forge Studio - AI Website Generator, Code Workspace, Live Preview and ZIP Export tool",
+  "description": "Magic.AI - AI Coding Assistant",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.magicai.app",
+    "productName": "Magic.AI",
+    "directories": { "output": "dist-electron" },
+    "files": ["electron/**/*"],
+    "win": {
+      "target": "portable",
+      "icon": "electron/icon.png"
+    }
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
@@ -25,6 +38,8 @@
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.35",
     "postcss": "^8.4.47",

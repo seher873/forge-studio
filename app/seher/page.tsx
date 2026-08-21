@@ -292,8 +292,14 @@ export default function WrapPage() {
 
       if (accessKey) window.sessionStorage.setItem(KEY_STORAGE, accessKey);
       const code = data.code ?? "";
-      setResult(code);
-      setHistory((h) => [...h, { role: "agent", text: code }]);
+      const fileResults = data.files as { path: string; status: string }[] | undefined;
+      let displayText = code;
+      if (fileResults && fileResults.length > 0) {
+        const fileSummary = fileResults.map((f) => `${f.status === "created" ? "✓" : "✗"} ${f.path}`).join("\n");
+        displayText = `[Files created]\n${fileSummary}\n\n${code}`;
+      }
+      setResult(displayText);
+      setHistory((h) => [...h, { role: "agent", text: displayText }]);
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
         setError("Cancelled.");
@@ -353,7 +359,7 @@ export default function WrapPage() {
           </div>
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-cyan-400/60" />
-            <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Seher Agent</span>
+            <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">MAGIC.AI</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -385,7 +391,7 @@ export default function WrapPage() {
                     <img src="/image.png" alt="avatar" />
                   </div>
                 <h1 className="text-lg font-semibold tracking-wide text-zinc-300">
-                  SEHER <span className="text-cyan-400/70">AGENT</span>
+                  MAGIC<span className="text-purple-400/70">.AI</span>
                 </h1>
                 <p className="mt-2 text-xs text-zinc-600">Type your prompt and press Enter. Esc to cancel.</p>
                 <p className="mt-1 text-xs text-zinc-600">Attach files with the clip icon below.</p>

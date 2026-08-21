@@ -1,0 +1,455 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Magic.AI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--border:rgba(255,255,255,0.08);--text:#e4e4e7;--muted:#71717a;--accent:#a855f7;--accent2:#3b82f6}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+.titlebar{height:32px;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;-webkit-app-region:drag;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+.titlebar-left{display:flex;align-items:center;gap:6px;-webkit-app-region:no-drag}
+.titlebar-left button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:4px}
+.titlebar-left button:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+.titlebar-btns{display:flex;gap:2px;-webkit-app-region:no-drag}
+.titlebar-btns button{width:36px;height:28px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;border-radius:4px}
+.titlebar-btns button:hover{background:rgba(255,255,255,0.08)}
+.titlebar-btns button.close:hover{background:#ef4444;color:white}
+
+.main-wrap{flex:1;display:flex;overflow:hidden}
+
+.sidebar{width:220px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:rgba(0,0,0,0.25);flex-shrink:0}
+.sidebar.hidden{display:none}
+.sidebar-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.sidebar-header button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;border-radius:4px}
+.sidebar-header button:hover{background:rgba(255,255,255,0.08)}
+.file-tree{flex:1;overflow-y:auto;padding:6px 0;font-size:12px}
+.file-tree::-webkit-scrollbar{width:3px}
+.file-tree::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+.file-item{padding:5px 14px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--muted);transition:all 0.12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-item:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.file-item.active{background:rgba(168,85,247,0.1);color:var(--accent)}
+.file-item .icon{font-size:13px;flex-shrink:0;width:16px;text-align:center}
+.empty-state{padding:20px 14px;text-align:center;color:var(--muted);font-size:11px;line-height:1.5}
+
+.editor-area{flex:1;display:flex;flex-direction:column;min-width:0}
+.editor-tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15);overflow-x:auto;flex-shrink:0;min-height:32px}
+.editor-tabs::-webkit-scrollbar{height:0}
+.editor-tab{padding:6px 14px;font-size:11px;cursor:pointer;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px;color:var(--muted);white-space:nowrap;transition:all 0.12s;position:relative}
+.editor-tab:hover{background:rgba(255,255,255,0.04)}
+.editor-tab.active{background:var(--bg);color:var(--text)}
+.editor-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent)}
+.editor-tab .close-tab{font-size:13px;margin-left:2px;opacity:0;transition:opacity 0.12s}
+.editor-tab:hover .close-tab{opacity:0.5}
+.editor-tab .close-tab:hover{opacity:1;color:#ef4444}
+.editor-content{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.editor-pane{position:absolute;inset:0;display:none;flex-direction:column;z-index:1}
+.editor-pane.active{display:flex}
+.editor-pane textarea{flex:1;width:100%;background:transparent;border:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;padding:14px 18px;resize:none;outline:none;tab-size:2;overflow:auto}
+.editor-pane .status-bar{padding:3px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;background:rgba(0,0,0,0.2);flex-shrink:0}
+#previewFrame{display:none;width:100%;flex:1;border:none;background:white;z-index:2}
+.no-file{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted)}
+.no-file .orb{width:60px;height:60px;position:relative;display:flex;align-items:center;justify-content:center}
+.no-file .wand{position:relative;width:3px;height:32px;background:linear-gradient(to top,rgba(168,85,247,0.3),rgba(168,85,247,0.7));border-radius:2px;transform:rotate(-20deg);box-shadow:0 0 10px rgba(168,85,247,0.2)}
+.no-file .wand::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:11px;height:11px;background:radial-gradient(circle,rgba(250,204,21,0.8),rgba(250,204,21,0.2),transparent 70%);border-radius:50%;box-shadow:0 0 16px rgba(250,204,21,0.5);animation:sparkle 2s ease-in-out infinite}
+.no-file .wand .ring{position:absolute;top:-13px;left:50%;transform:translateX(-50%);width:22px;height:22px;border:1px solid rgba(168,85,247,0.2);border-radius:50%;animation:ringPulse 3s ease-in-out infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+.chat-panel{width:380px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:rgba(0,0,0,0.15);flex-shrink:0}
+.chat-header{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.chat-header h3{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.chat-header .dot-live{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:livePulse 2s infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.chat-header button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:4px}
+.chat-header button:hover{background:rgba(255,255,255,0.08)}
+.chat-area{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-area::-webkit-scrollbar{width:3px}
+.chat-area::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;gap:10px;padding:20px 0}
+.welcome-orb{width:70px;height:70px;position:relative;display:flex;align-items:center;justify-content:center}
+.wand{position:relative;width:4px;height:40px;background:linear-gradient(to top,rgba(168,85,247,0.4),rgba(168,85,247,0.9));border-radius:2px;transform:rotate(-20deg);box-shadow:0 0 12px rgba(168,85,247,0.3)}
+.wand::before{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:14px;height:14px;background:radial-gradient(circle,rgba(250,204,21,0.9),rgba(250,204,21,0.3),transparent 70%);border-radius:50%;box-shadow:0 0 20px rgba(250,204,21,0.6),0 0 40px rgba(250,204,21,0.3);animation:sparkle 2s ease-in-out infinite}
+.wand .ring{position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:28px;height:28px;border:1.5px solid rgba(168,85,247,0.3);border-radius:50%;animation:ringPulse 3s ease-in-out infinite}
+@keyframes sparkle{0%,100%{transform:translateX(-50%) scale(1);opacity:1}50%{transform:translateX(-50%) scale(1.3);opacity:0.7}}
+@keyframes ringPulse{0%,100%{transform:translateX(-50%) scale(1);opacity:0.3}50%{transform:translateX(-50%) scale(1.4);opacity:0.1}}
+.welcome h2{font-size:18px;font-weight:700}
+.welcome h2 span{color:var(--accent)}
+.welcome p{color:var(--muted);font-size:11px;max-width:260px;line-height:1.4}
+.welcome .link{color:var(--accent);cursor:pointer;font-size:11px;text-decoration:underline}
+
+.msg{display:flex;gap:8px;max-width:95%;animation:fadeIn 0.25s ease}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg .avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.msg.user .avatar{background:rgba(59,130,246,0.15);color:#60a5fa}
+.msg.agent .avatar{background:rgba(168,85,247,0.15);color:#c084fc}
+.msg .bubble{padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.msg.user .bubble{background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.12)}
+.msg.agent .bubble{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.08)}
+.msg .bubble code{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px}
+.msg .bubble pre{background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;overflow-x:auto;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid var(--border)}
+.file-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:4px;font-size:11px;color:#22d3ee;margin:3px 0;cursor:pointer;transition:all 0.15s}
+.file-badge:hover{background:rgba(34,211,238,0.2)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.loading-dots{display:flex;gap:5px;padding:6px 0}
+.loading-dots span{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:bounce 1.4s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:0.2s}
+.loading-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:0.4}40%{transform:translateY(-6px);opacity:1}}
+
+.chat-input{padding:10px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;align-items:flex-end}
+.chat-input .upload-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;font-size:16px}
+.chat-input .upload-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+.chat-input textarea{flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;resize:none;outline:none;min-height:36px;max-height:100px;transition:border-color 0.2s}
+.chat-input textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(168,85,247,0.1)}
+.chat-input textarea::placeholder{color:var(--muted)}
+.send-btn{width:36px;height:36px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+.send-btn:hover{background:#9333ea;transform:scale(1.05)}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.send-btn svg{width:16px;height:16px}
+
+.settings-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);justify-content:center;align-items:center}
+.settings-overlay.active{display:flex}
+.settings-panel{background:#18181b;border:1px solid var(--border);border-radius:16px;padding:28px;width:440px;max-width:90vw}
+.settings-panel h2{font-size:18px;margin-bottom:6px}
+.settings-panel p{color:var(--muted);font-size:12px;margin-bottom:14px}
+.settings-panel label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.settings-panel input[type="text"],.settings-panel input[type="password"]{width:100%;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;margin-bottom:14px;outline:none;transition:border-color 0.2s}
+.settings-panel input:focus{border-color:var(--accent)}
+.settings-panel .row{display:flex;gap:8px}
+.settings-panel .row button{flex:1;padding:9px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s}
+.btn-primary{background:var(--accent);color:white}
+.btn-primary:hover{background:#9333ea}
+.btn-secondary{background:rgba(255,255,255,0.06);color:var(--text)}
+.btn-secondary:hover{background:rgba(255,255,255,0.1)}
+.folder-selector{display:flex;gap:8px;margin-bottom:14px}
+.folder-selector input{flex:1}
+.folder-selector button{padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:12px;white-space:nowrap}
+.folder-selector button:hover{background:rgba(255,255,255,0.1)}
+
+.upload-preview{padding:8px 12px;margin:0 14px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:none;flex-wrap:wrap;gap:6px}
+.upload-preview.active{display:flex}
+.upload-chip{padding:3px 8px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.15);border-radius:4px;color:#22d3ee;font-family:'JetBrains Mono',monospace;font-size:10px;display:flex;align-items:center;gap:4px}
+.upload-chip .rm{cursor:pointer;opacity:0.6}
+.upload-chip .rm:hover{opacity:1;color:#ef4444}
+.view-btn{padding:4px 10px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:11px;border-radius:4px;transition:all 0.15s}
+.view-btn:hover{background:rgba(255,255,255,0.06)}
+.view-btn.active{background:rgba(168,85,247,0.15);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="titlebar">
+<div class="titlebar-left">
+<button onclick="toggleSidebar()" title="Toggle Files">☰</button>
+<span>Magic.AI</span>
+</div>
+<div class="titlebar-btns">
+<button onclick="window.magic?.minimize()">─</button>
+<button onclick="window.magic?.maximize()">□</button>
+<button class="close" onclick="window.magic?.close()">✕</button>
+</div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+<div class="settings-panel">
+<h2>Settings</h2>
+<p>Enter your Gemini API key to start using Magic.AI</p>
+<label>Folder to save files</label>
+<div class="folder-selector">
+<input type="text" id="projectDir" readonly placeholder="Select folder..."/>
+<button onclick="selectFolder()">Browse</button>
+</div>
+<label>Gemini API Key</label>
+<input type="password" id="apiKeyInput" placeholder="AIzaSy..."/>
+<label>Model</label>
+<select id="modelSelect" style="width:100%;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:14px;outline:none">
+<option value="gemini-3.6-flash">gemini-3.6-flash</option>
+<option value="gemini-3.5-flash">gemini-3.5-flash</option>
+<option value="gemini-2.5-flash">gemini-2.5-flash</option>
+</select>
+<div class="row">
+<button class="btn-secondary" onclick="toggleSettings()">Cancel</button>
+<button class="btn-primary" onclick="saveSettings()">Save</button>
+</div>
+</div>
+</div>
+
+<div class="main-wrap">
+<div class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<h3>Files</h3>
+<div style="display:flex;gap:4px">
+<button onclick="openInVSCode()" title="Open Folder" style="font-size:13px">📂</button>
+<button onclick="refreshFiles()" title="Refresh">↻</button>
+</div>
+</div>
+<div class="file-tree" id="fileTree">
+<div class="empty-state">No files yet.<br/>Ask AI to create some!</div>
+</div>
+</div>
+
+<div class="editor-area">
+<div style="display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15);flex-shrink:0">
+<div class="editor-tabs" id="editorTabs" style="flex:1"></div>
+<div id="previewToggle" style="display:none;align-items:center;gap:2px;padding:0 8px">
+<button class="view-btn active" onclick="switchView('code')" id="btnCode">Code</button>
+<button class="view-btn" onclick="switchView('preview')" id="btnPreview">Preview</button>
+</div>
+</div>
+<div class="editor-content" id="editorContent">
+<div class="no-file" id="noFile">
+<div class="orb"><div class="wand"><div class="ring"></div></div></div>
+<div style="font-size:16px;font-weight:700">MAGIC<span style="color:var(--accent)">.AI</span></div>
+<div style="font-size:11px">Open a file or ask AI to create one</div>
+<div style="font-size:11px;cursor:pointer;color:var(--accent);text-decoration:underline;margin-top:4px" onclick="toggleSettings()">Set API Key</div>
+</div>
+<iframe id="previewFrame" style="display:none;width:100%;flex:1;border:none;background:white"></iframe>
+</div>
+</div>
+
+<div class="chat-panel" id="chatPanel">
+<div class="chat-header">
+<h3><span class="dot-live"></span> AI Chat</h3>
+<button onclick="toggleSettings()" title="Settings">⚙</button>
+</div>
+<div class="chat-area" id="chatArea">
+<div class="welcome" id="welcomeScreen">
+<div class="welcome-orb"><div class="wand"><div class="ring"></div></div></div>
+<h2>MAGIC<span>.AI</span></h2>
+<p>Ask me to create files, write code, or build projects.</p>
+<span class="link" onclick="toggleSettings()">Set up API key to start</span>
+</div>
+</div>
+<div class="upload-preview" id="uploadPreview"></div>
+<div class="chat-input">
+<button class="upload-btn" onclick="triggerUpload()" title="Upload files">📎</button>
+<input type="file" id="fileInput" multiple style="display:none" onchange="handleFiles(event)"/>
+<textarea id="promptInput" rows="1" placeholder="Ask me to create something..." onkeydown="handleKey(event)"></textarea>
+<button class="send-btn" id="sendBtn" onclick="send()" disabled>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/></svg>
+</button>
+</div>
+</div>
+</div>
+
+<script>
+var chat=document.getElementById("chatArea"),input=document.getElementById("promptInput"),sendBtn=document.getElementById("sendBtn"),welcomeScreen=document.getElementById("welcomeScreen"),fileTreeEl=document.getElementById("fileTree"),editorTabs=document.getElementById("editorTabs"),editorContent=document.getElementById("editorContent"),uploadPreview=document.getElementById("uploadPreview"),fileInput=document.getElementById("fileInput");
+var apiKey=localStorage.getItem("magic_api_key")||"",model=localStorage.getItem("magic_model")||"gemini-3.6-flash",projectDir="",busy=false,openFiles={},activeFile=null,uploadedFiles=[],createdFiles=[];
+
+(function(){
+if(window.magic){projectDir=window.magic.getProjectDir().then(function(d){projectDir=d;document.getElementById("projectDir").value=d;refreshFiles()})}
+document.getElementById("apiKeyInput").value=apiKey;document.getElementById("modelSelect").value=model;updateSendBtn();
+})();
+
+input.addEventListener("input",function(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,100)+"px";updateSendBtn()});
+function updateSendBtn(){sendBtn.disabled=!input.value.trim()||busy||!apiKey}
+function toggleSettings(){document.getElementById("settingsOverlay").classList.toggle("active")}
+function toggleSidebar(){var s=document.getElementById("sidebar");s.classList.toggle("hidden")}
+
+async function selectFolder(){
+if(!window.magic)return;
+var r=await window.magic.selectFolder();
+if(r.ok){projectDir=r.path;document.getElementById("projectDir").value=r.path;window.magic.setProjectDir(r.path);refreshFiles()}
+}
+function saveSettings(){
+apiKey=document.getElementById("apiKeyInput").value.trim();
+model=document.getElementById("modelSelect").value;
+localStorage.setItem("magic_api_key",apiKey);localStorage.setItem("magic_model",model);
+toggleSettings();updateSendBtn();
+}
+function handleKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}}
+
+function triggerUpload(){fileInput.click()}
+function handleFiles(e){
+var files=e.target.files;
+for(var i=0;i<files.length;i++){uploadedFiles.push({name:files[i].name,content:null,file:files[i]})}
+renderUploadPreview();fileInput.value="";
+}
+function renderUploadPreview(){
+if(uploadedFiles.length===0){uploadPreview.classList.remove("active");uploadPreview.innerHTML="";return}
+uploadPreview.classList.add("active");
+var html="";
+uploadedFiles.forEach(function(f,i){html+='<div class="upload-chip">📄 '+f.name+' <span class="rm" onclick="removeUpload('+i+')">✕</span></div>'});
+uploadPreview.innerHTML=html;
+}
+function removeUpload(i){uploadedFiles.splice(i,1);renderUploadPreview()}
+function readFileAsText(file){return new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(r.result)};r.onerror=reject;r.readAsText(file)})}
+
+async function refreshFiles(){
+if(createdFiles.length===0){fileTreeEl.innerHTML='<div class="empty-state">No files yet.<br/>Ask AI to create some!</div>';return}
+fileTreeEl.innerHTML="";
+var sorted=createdFiles.sort(function(a,b){return a.split("/").pop().localeCompare(b.split("/").pop())});
+sorted.forEach(function(path){
+var div=document.createElement("div");
+div.className="file-item file";
+var icon=getFileIcon(path);
+div.innerHTML='<span class="icon">'+icon+'</span>'+path;
+div.onclick=function(){openFile(path)};
+fileTreeEl.appendChild(div);
+});
+}
+function getFileIcon(name){var ext=name.split(".").pop().toLowerCase();var icons={html:"\uD83C\uDF10",css:"\uD83C\uDFA8",js:"\u26A1",ts:"\uD83D\uDD37",tsx:"\u269B",jsx:"\u269B",json:"\uD83D\uDCCB",md:"\uD83D\uDCDD",py:"\uD83D\uDC0D",txt:"\uD83D\uDCC4"};return icons[ext]||"\uD83D\uDCC4"}
+
+async function openFile(path){
+if(openFiles[path]){activateTab(path);return}
+var r=await window.magic.readFile(path);
+if(!r.ok)return;
+openFiles[path]={content:r.content,original:r.content};
+createTab(path,r.content);activateTab(path);refreshFiles();
+}
+function createTab(path,content){
+var tab=document.createElement("div");tab.className="editor-tab";tab.dataset.path=path;
+tab.innerHTML='<span>'+getFileIcon(path)+'</span>'+path.split("/").pop()+'<span class="close-tab" onclick="event.stopPropagation();closeTab(\''+path+'\')">\u2715</span>';
+tab.onclick=function(){activateTab(path)};editorTabs.appendChild(tab);
+var pane=document.createElement("div");pane.className="editor-pane";pane.dataset.path=path;
+var lines=content.split("\n").length;
+pane.innerHTML='<textarea spellcheck="false">'+escapeHtml(content)+'</textarea><div class="status-bar"><span>'+path+'</span><span>'+lines+' lines</span></div>';
+var ta=pane.querySelector("textarea");
+ta.addEventListener("input",function(){openFiles[path].content=ta.value;updateTabDirty(path)});
+ta.addEventListener("keydown",function(e){if(e.key==="Tab"){e.preventDefault();var s=ta.selectionStart;ta.value=ta.value.substring(0,s)+"  "+ta.value.substring(ta.selectionEnd);ta.selectionStart=ta.selectionEnd=s+2}});
+editorContent.appendChild(pane);
+}
+function activateTab(path){
+activeFile=path;
+document.querySelectorAll(".editor-tab").forEach(function(t){t.classList.toggle("active",t.dataset.path===path)});
+document.querySelectorAll(".editor-pane").forEach(function(p){p.classList.toggle("active",p.dataset.path===path)});
+var nf=document.getElementById("noFile");if(nf)nf.remove();
+showPreviewToggle(path);
+if(currentView==="preview"&&activeFile){switchView("preview")}
+else{document.getElementById("previewFrame").style.display="none";var active=editorContent.querySelector(".editor-pane.active");if(active)active.style.display="flex"}
+}
+function closeTab(path){
+var tab=editorTabs.querySelector('[data-path="'+path+'"]');if(tab)tab.remove();
+var pane=editorContent.querySelector('[data-path="'+path+'"]');if(pane)pane.remove();
+delete openFiles[path];
+var remaining=editorTabs.querySelectorAll(".editor-tab");
+if(remaining.length>0){activateTab(remaining[remaining.length-1].dataset.path)}
+else{activeFile=null;editorContent.innerHTML='<div class="no-file" id="noFile"><div class="orb"><div class="wand"><div class="ring"></div></div></div><div style="font-size:16px;font-weight:700">MAGIC<span style="color:var(--accent)">.AI</span></div><div style="font-size:11px">Open a file or ask AI to create one</div></div>'}
+refreshFiles();
+}
+function updateTabDirty(path){
+if(!openFiles[path])return;
+var tab=editorTabs.querySelector('[data-path="'+path+'"]');if(!tab)return;
+var dirty=openFiles[path].content!==openFiles[path].original;
+var name=path.split("/").pop();var icon=getFileIcon(path);
+tab.innerHTML='<span>'+icon+'</span>'+(dirty?name+" *":name)+'<span class="close-tab" onclick="event.stopPropagation();closeTab(\''+path+'\')">\u2715</span>';
+}
+function escapeHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function openInVSCode(){if(window.magic)window.magic.openVSCode(projectDir);else alert("VS Code open only works in desktop app")}
+
+var currentView="code";
+async function switchView(view){
+currentView=view;
+var btnCode=document.getElementById("btnCode");
+var btnPreview=document.getElementById("btnPreview");
+var frame=document.getElementById("previewFrame");
+btnCode.classList.toggle("active",view==="code");
+btnPreview.classList.toggle("active",view==="preview");
+if(view==="preview"){
+var pane=editorContent.querySelector(".editor-pane.active");
+if(pane){
+var code=pane.querySelector("textarea").value;
+var ext=activeFile?activeFile.split(".").pop().toLowerCase():"";
+if(ext==="html"||ext==="htm"){
+if(window.magic){
+var r=await window.magic.saveFile({filePath:"__preview.html",content:code});
+if(r.ok){frame.src=r.path.replace(/\\/g,"/")}
+}else{frame.srcdoc=code}
+frame.style.display="flex";
+frame.style.flex="1";
+pane.style.display="none";
+}else{
+frame.srcdoc="<html><body style='font-family:system-ui,sans-serif;padding:40px;color:#999;background:#111'><h2 style='color:#a855f7'>Preview not available</h2><p>This is a <b>"+ext+"</b> file. Only HTML files can be previewed.</p></body></html>";
+frame.style.display="flex";
+frame.style.flex="1";
+pane.style.display="none";
+}
+}
+}else{
+frame.style.display="none";
+frame.style.flex="none";
+var active=editorContent.querySelector(".editor-pane.active");
+if(active)active.style.display="flex";
+}
+}
+function showPreviewToggle(path){
+var ext=path?path.split(".").pop().toLowerCase():"";
+var tog=document.getElementById("previewToggle");
+if(ext==="html"||ext==="htm"){tog.style.display="flex"}
+else{tog.style.display="none";if(currentView==="preview")switchView("code")}
+}
+
+function addMsg(role,html){
+if(welcomeScreen)welcomeScreen.remove();
+var div=document.createElement("div");div.className="msg "+role;
+var avatar=role==="user"?"You":"\u2726";
+div.innerHTML='<div class="avatar">'+avatar+'</div><div class="bubble">'+html+'</div>';
+chat.appendChild(div);chat.scrollTop=chat.scrollHeight;return div;
+}
+function addLoading(){
+var div=document.createElement("div");div.className="msg agent";div.id="loading";
+div.innerHTML='<div class="avatar">\u2726</div><div class="bubble"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
+}
+function removeLoading(){var el=document.getElementById("loading");if(el)el.remove()}
+function formatText(text){return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/```(\w*)\n([\s\S]*?)```/g,"<pre><code>$2</code></pre>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")}
+
+var SYSTEM_PROMPT="You are Magic.AI, a powerful coding assistant with full file system access.\n\nWhen the user asks you to create, edit, or work with files, use these exact tags:\n\n[FILE: path/to/file.ext]\nfile content here\n[/FILE]\n\nRules:\n- Always use relative paths\n- You can create multiple files in one response\n- For editing, show complete new file content\n- After creating files, explain what you did\n- If no file operations needed, just answer normally";
+
+async function send(){
+var text=input.value.trim();if(!text||busy||!apiKey)return;
+addMsg("user",formatText(text));input.value="";input.style.height="auto";
+busy=true;updateSendBtn();addLoading();
+
+var userMsg=text;
+for(var i=0;i<uploadedFiles.length;i++){
+if(!uploadedFiles[i].content){uploadedFiles[i].content=await readFileAsText(uploadedFiles[i].file)}
+userMsg+="\n\n--- File: "+uploadedFiles[i].name+" ---\n"+uploadedFiles[i].content;
+}
+uploadedFiles=[];renderUploadPreview();
+
+try{
+var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+method:"POST",
+headers:{"Content-Type":"application/json","x-goog-api-key":apiKey},
+body:JSON.stringify({contents:[{parts:[{text:SYSTEM_PROMPT+"\n\nUser: "+userMsg}]}],generationConfig:{temperature:0.7,maxOutputTokens:16384}})
+});
+if(!res.ok){var err=await res.text();removeLoading();addMsg("agent","\u26A0 API Error ("+res.status+"): "+err.slice(0,200));return}
+var data=await res.json();
+var reply=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:"No response.";
+var fileRegex=/\[FILE:\s*(.+?)\]\r?\n([\s\S]*?)\[\/FILE\]/g;
+var match;var files=[];
+while((match=fileRegex.exec(reply))!==null)files.push({path:match[1].trim(),content:match[2]});
+var cleanReply=reply.replace(/\[FILE:\s*(.+?)\]\r?\n[\s\S]*?\[\/FILE\]/g,"").trim();
+var savedFiles=[];
+for(var j=0;j<files.length;j++){
+try{
+if(window.magic){
+var r=await window.magic.saveFile({filePath:files[j].path,content:files[j].content});
+if(r.ok){savedFiles.push(files[j].path);createdFiles.push(files[j].path)}
+}else{
+var blob=new Blob([files[j].content],{type:"text/plain"});
+var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=files[j].path.split("/").pop();a.click();
+savedFiles.push(files[j].path+" (downloaded)");createdFiles.push(files[j].path);
+}
+}catch(e){savedFiles.push(files[j].path+" (error)")}
+}
+removeLoading();
+var agentHtml=formatText(cleanReply);
+if(savedFiles.length>0){
+var badges=savedFiles.map(function(p){return '<div class="file-badge" onclick="openFile(\''+p+'\')">📄 '+p+' — click to open</div>'}).join("");
+agentHtml=badges+agentHtml;
+}
+addMsg("agent",agentHtml);
+if(savedFiles.length>0){refreshFiles();for(var k=0;k<files.length;k++){if(window.magic)openFile(files[k].path)}}
+}catch(e){removeLoading();addMsg("agent","\u26A0 Error: "+e.message)}
+finally{busy=false;updateSendBtn()}
+}
+</script>
+</body>
+</html>
