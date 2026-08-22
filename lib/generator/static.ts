@@ -398,6 +398,107 @@ function renderContact(s: SiteSection): string {
   </section>`;
 }
 
+function renderCategories(s: SiteSection, tokens: DesignTokens): string {
+  return `<section id="${esc(s.id)}" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="categories">Explore</p>
+        <h2>${esc(s.heading)}</h2>
+        <p class="lead">${esc(s.sub || "")}</p>
+      </div>
+      <div class="category-grid">
+        ${s.items
+          .map(
+            (item) => `<a href="#menu" class="category-card">
+              <img src="${placeholderImg(item.title, 200, 200)}" alt="${esc(item.title)}" class="category-img" />
+              <span class="category-name">${esc(item.title)}</span>
+            </a>`
+          )
+          .join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderMenu(s: SiteSection): string {
+  return `<section id="menu" class="section alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" data-i18n="menu">Popular</p>
+        <h2>${esc(s.heading)}</h2>
+        <p class="lead">${esc(s.sub || "")}</p>
+      </div>
+      <div class="menu-grid">
+        ${s.items
+          .map(
+            (item) => `<div class="food-card">
+              <div class="food-card-img-wrap">
+                <img src="${placeholderImg(item.title, 400, 280)}" alt="${esc(item.title)}" class="food-card-img" />
+                <span class="food-card-tag">${esc(item.meta || "Popular")}</span>
+              </div>
+              <div class="food-card-body">
+                <h3 class="food-card-title">${esc(item.title)}</h3>
+                <p class="food-card-desc">${esc(item.text)}</p>
+                <div class="food-card-footer">
+                  <span class="food-card-price">${esc(item.meta || "$9.99")}</span>
+                  <button class="btn btn-primary btn-sm food-card-btn" type="button">Add to Cart</button>
+                </div>
+              </div>
+            </div>`
+          )
+          .join("")}
+      </div>
+      ${s.cta ? `<div class="mt-40" style="text-align:center"><a class="btn btn-primary btn-lg" href="${esc(s.cta.href)}">${esc(s.cta.label)}</a></div>` : ""}
+    </div>
+  </section>`;
+}
+
+function renderFeatured(s: SiteSection, model: SiteModel): string {
+  return `<section id="${esc(s.id)}" class="section">
+    <div class="wrap">
+      <div class="featured-grid">
+        <div class="featured-content">
+          <p class="eyebrow">Why Choose Us</p>
+          <h2>${esc(s.heading)}</h2>
+          <p class="lead">${esc(s.sub || "")}</p>
+          <div class="featured-features">
+            ${s.items
+              .map(
+                (item) => `<div class="featured-feature">
+                  <div class="icon-badge">${svgIcon(item.icon)}</div>
+                  <div>
+                    <b>${esc(item.title)}</b>
+                    <p>${esc(item.text)}</p>
+                  </div>
+                </div>`
+              )
+              .join("")}
+          </div>
+          ${s.cta ? `<a class="btn btn-primary btn-lg" href="${esc(s.cta.href)}">${esc(s.cta.label)}</a>` : ""}
+        </div>
+        <div class="featured-visual">
+          <img src="${placeholderImg(model.brand, 520, 560)}" alt="${esc(model.brand)}" class="featured-img" />
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderSpecialOffer(s: SiteSection, tokens: DesignTokens): string {
+  return `<section id="${esc(s.id)}" class="section special-offer-section">
+    <div class="wrap">
+      <div class="special-offer-card">
+        <div class="special-offer-content">
+          <span class="pill pill-light">${svgIcon("sparkles")} Limited Time Offer</span>
+          <h2>${esc(s.heading)}</h2>
+          <p class="lead">${esc(s.sub || "")}</p>
+          ${s.cta ? `<a class="btn btn-primary btn-lg" href="${esc(s.cta.href)}">${esc(s.cta.label)}</a>` : ""}
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Full document                                                       */
 /* ------------------------------------------------------------------ */
@@ -432,6 +533,14 @@ export function renderPreviewHtml(model: SiteModel, tokens: DesignTokens): strin
           return renderFaq(s);
         case "contact":
           return renderContact(s);
+        case "categories":
+          return renderCategories(s, tokens);
+        case "menu":
+          return renderMenu(s);
+        case "featured":
+          return renderFeatured(s, model);
+        case "special-offer":
+          return renderSpecialOffer(s, tokens);
         default:
           return "";
       }
@@ -860,5 +969,55 @@ p { color: var(--ink-soft); }
 html[dir="rtl"] .whatsapp-float { right: auto; left: 20px; }
 html[dir="rtl"] .faq summary::after { float: left; }
 html[dir="rtl"] .learn-more, html[dir="rtl"] .back-link { flex-direction: row-reverse; }
+
+/* Category cards */
+.category-grid { display: flex; gap: 20px; overflow-x: auto; padding: 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.category-grid::-webkit-scrollbar { display: none; }
+.category-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 24px; border: 2px solid var(--border); border-radius: 16px; background: var(--paper); cursor: pointer; transition: all .25s; min-width: 120px; scroll-snap-align: start; text-align: center; }
+.category-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.category-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+.category-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+@media (max-width: 620px) { .category-card { min-width: 100px; padding: 16px; } }
+
+/* Food menu cards */
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+@media (max-width: 900px) { .menu-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .menu-grid { grid-template-columns: 1fr; } }
+.food-card { border: 1px solid var(--border); border-radius: 16px; background: var(--paper); overflow: hidden; transition: transform .25s, box-shadow .25s; }
+.food-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px -12px rgba(15,23,42,.18); }
+.food-card-img-wrap { position: relative; overflow: hidden; }
+.food-card-img { display: block; width: 100%; height: 200px; object-fit: cover; transition: transform .4s; }
+.food-card:hover .food-card-img { transform: scale(1.06); }
+.food-card-tag { position: absolute; top: 12px; left: 12px; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.food-card-body { padding: 20px; }
+.food-card-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.food-card-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 16px; }
+.food-card-footer { display: flex; align-items: center; justify-content: space-between; }
+.food-card-price { font-size: 20px; font-weight: 700; color: var(--accent); }
+.food-card-btn { white-space: nowrap; }
+
+/* Featured section */
+.featured-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.featured-content h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; margin-top: 12px; }
+.featured-content .lead { margin-top: 16px; font-size: 16px; }
+.featured-features { display: grid; gap: 16px; margin: 28px 0 32px; }
+.featured-feature { display: flex; align-items: flex-start; gap: 16px; }
+.featured-feature b { display: block; font-size: 15px; margin-bottom: 2px; }
+.featured-feature p { font-size: 14px; color: var(--ink-soft); }
+.featured-img { display: block; width: 100%; border-radius: 20px; box-shadow: 0 20px 50px -15px rgba(15,23,42,.2); }
+@media (max-width: 768px) { .featured-grid { grid-template-columns: 1fr; } }
+
+/* Special offer */
+.special-offer-section { padding: 64px 0; }
+.special-offer-card { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000)); border-radius: 20px; padding: 64px 48px; text-align: center; color: #fff; position: relative; overflow: hidden; }
+.special-offer-card::before { content: ""; position: absolute; top: -40%; right: -20%; width: 400px; height: 400px; border-radius: 50%; background: rgba(255,255,255,.08); }
+.special-offer-card::after { content: ""; position: absolute; bottom: -30%; left: -10%; width: 300px; height: 300px; border-radius: 50%; background: rgba(255,255,255,.06); }
+.special-offer-content { position: relative; z-index: 1; }
+.special-offer-content .pill-light { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+.special-offer-content h2 { font-size: clamp(28px, 5vw, 48px); font-weight: 700; margin-top: 20px; color: #fff; }
+.special-offer-content .lead { max-width: 520px; margin: 16px auto 32px; font-size: 16px; color: rgba(255,255,255,.85); }
+.special-offer-content .btn-primary { background: #fff; color: var(--accent); }
+.special-offer-content .btn-primary:hover { opacity: .9; }
+@media (max-width: 620px) { .special-offer-card { padding: 40px 24px; } }
 `;
 }

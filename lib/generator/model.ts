@@ -23,7 +23,8 @@ const INDUSTRY_SECTIONS: Record<string, SectionType[]> = {
   healthcare: ["services", "about", "testimonials", "contact"],
   creative: ["portfolio", "services", "about", "contact"],
   "real-estate": ["services", "about", "portfolio", "contact"],
-  food: ["about", "testimonials", "contact"],
+  food: ["categories", "menu", "featured", "special-offer", "testimonials", "contact"],
+  restaurant: ["categories", "menu", "featured", "special-offer", "testimonials", "contact"],
   fitness: ["services", "about", "testimonials", "contact"],
   ecommerce: ["products", "services", "about", "testimonials", "contact"],
   ngo: ["about", "services", "contact"],
@@ -33,17 +34,23 @@ const INDUSTRY_SECTIONS: Record<string, SectionType[]> = {
 
 const SECTION_KEYWORDS: Array<{ type: SectionType; words: string[] }> = [
   { type: "about", words: ["about", "mission", "who we are", "our story", "since", "founded", "background"] },
-  { type: "services", words: ["service", "offer", "what we do", "solution", "consult", "support", "training program", "programs"] },
-  { type: "courses", words: ["course", "training", "learn", "class", "ms office", "excel", "web development", "python", "canva", "graphic", "digital marketing", "workshop"] },
+  { type: "services", words: ["service", "offer", "what we do", "solution", "consult", "support"] },
+  { type: "courses", words: ["training program", "programs", "workshop"] },
   { type: "portfolio", words: ["portfolio", "our work", "projects", "gallery", "case study", "samples"] },
-  { type: "testimonials", words: ["testimonial", "review", "feedback", "success story", "client", "student say", "what people say"] },
+  { type: "testimonials", words: ["testimonial", "review", "feedback", "success story", "client", "student say", "what people say", "customer"] },
   { type: "pricing", words: ["pricing", "plan", "package", "fee", "cost", "membership", "subscription", "tuition"] },
   { type: "faq", words: ["faq", "question", "frequently", "help"] },
-  { type: "products", words: ["product", "shop", "store", "buy", "order", "cart", "checkout", "sell", "sale", "delivery", "catalog"] },
+  { type: "products", words: ["shop", "store", "buy", "order", "cart", "checkout", "sell", "sale", "delivery", "catalog"] },
+  { type: "categories", words: ["category", "categories", "explore", "burgers", "pizza", "pasta", "chicken", "salads", "desserts", "drinks"] },
+  { type: "menu", words: ["menu", "popular", "best seller", "dish", "dishes", "food", "meal", "meals", "appetizer", "entree", "beverage"] },
+  { type: "featured", words: ["featured", "highlight", "signature", "specialty", "made fresh", "chef", "crafted", "premium"] },
+  { type: "special-offer", words: ["offer", "discount", "promo", "coupon", "deal", "off", "first order"] },
   { type: "contact", words: ["contact", "get in touch", "reach", "location", "address", "phone", "email", "visit", "enrol", "admission", "register"] },
 ];
 
 const ECOMMERCE_HINTS = ["ecommerce", "e-commerce", "online store", "shop", "retail", "buy", "sell", "product", "cart", "checkout", "order", "delivery", "catalog"];
+
+const FOOD_HINTS = ["restaurant", "food", "burger", "pizza", "pasta", "chicken", "salad", "dessert", "drink", "menu", "chef", "kitchen", "dining", "cafe", "bakery", "seafood", "steak", "sushi", "appetizer", "beverage", "meal", "dish", "cooking", "culinary", "foody", "fresh", "delicious", "tasty", "hungry", "eat", "eating", "brunch", "lunch", "dinner", "breakfast"];
 
 const KNOWN_TOPICS: string[] = [
   "MS Office", "Microsoft Office", "MS Excel", "Excel", "Word", "PowerPoint",
@@ -57,6 +64,10 @@ const KNOWN_TOPICS: string[] = [
 
 function normalize(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ");
+}
+
+function hasWord(text: string, word: string): boolean {
+  return new RegExp(`\\b${word.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "i").test(text);
 }
 
 function extractTopics(details: string): string[] {
@@ -77,26 +88,32 @@ function detailSentence(details: string, minLen = 80): string {
 function detectSections(info: ProjectInfo): SectionType[] {
   const explicit = (info.sections ?? []).filter(
     (s): s is SectionType =>
-      ["about", "services", "courses", "portfolio", "testimonials", "pricing", "faq", "products", "contact"].includes(s)
+      ["about", "services", "courses", "portfolio", "testimonials", "pricing", "faq", "products", "contact", "categories", "menu", "featured", "special-offer"].includes(s)
   );
   const set = new Set<SectionType>(explicit);
   set.add("hero");
 
   const industry = info.industry.toLowerCase();
-  for (const [key, sections] of Object.entries(INDUSTRY_SECTIONS)) {
-    if (industry === key || industry.includes(key)) {
-      sections.forEach((s) => set.add(s));
-      break;
+  const isFood = isFoodProject(info);
+
+  if (isFood && !explicit.length) {
+    ["categories", "menu", "featured", "special-offer", "testimonials", "contact"].forEach((s) => set.add(s as SectionType));
+  } else {
+    for (const [key, sections] of Object.entries(INDUSTRY_SECTIONS)) {
+      if (industry === key || industry.includes(key)) {
+        sections.forEach((s) => set.add(s));
+        break;
+      }
     }
   }
 
   const norm = normalize(info.details);
   for (const { type, words } of SECTION_KEYWORDS) {
-    if (words.some((w) => norm.includes(w))) set.add(type);
+    if (words.some((w) => hasWord(norm, w))) set.add(type);
   }
 
   const priority: SectionType[] = [
-    "hero", "about", "services", "courses", "products", "portfolio", "testimonials", "pricing", "faq", "contact",
+    "hero", "about", "services", "courses", "products", "categories", "menu", "featured", "special-offer", "portfolio", "testimonials", "pricing", "faq", "contact",
   ];
   const order = priority.filter((s) => set.has(s));
   const extras = Array.from(set).filter((s) => !priority.includes(s));
@@ -107,6 +124,12 @@ export function isEcommerceProject(info: ProjectInfo): boolean {
   const industry = info.industry.toLowerCase();
   const norm = normalize(info.details);
   return ECOMMERCE_HINTS.some((h) => industry.includes(h) || norm.includes(h));
+}
+
+function isFoodProject(info: ProjectInfo): boolean {
+  const industry = info.industry.toLowerCase();
+  const norm = normalize(info.details);
+  return FOOD_HINTS.some((h) => industry.includes(h) || hasWord(norm, h));
 }
 
 /* ------------------------------------------------------------------ */
@@ -320,6 +343,59 @@ function buildSection(
         ],
         cta: { label: "Send message", href: "#contact" },
       };
+    case "categories":
+      return {
+        id,
+        type,
+        heading: "Explore Categories",
+        sub: "Find exactly what you are craving.",
+        items: [
+          { title: "Burgers", text: "Juicy, flame-grilled perfection.", icon: "zap" },
+          { title: "Pizza", text: "Wood-fired, loaded with flavour.", icon: "star" },
+          { title: "Pasta", text: "Handmade, rich and comforting.", icon: "layers" },
+          { title: "Chicken", text: "Crispy, tender, unforgettable.", icon: "shield" },
+          { title: "Salads", text: "Fresh, vibrant and wholesome.", icon: "compass" },
+          { title: "Desserts", text: "Sweet endings to every meal.", icon: "sparkles" },
+        ],
+      };
+    case "menu":
+      return {
+        id,
+        type,
+        heading: "Popular Right Now",
+        sub: "Our customers' favourite picks.",
+        items: [
+          { title: "Classic Smash Burger", text: "Double beef patty, cheddar, lettuce and signature sauce.", icon: "zap", meta: "$12.99" },
+          { title: "Margherita Pizza", text: "San Marzano tomatoes, fresh mozzarella, basil on sourdough.", icon: "star", meta: "$14.99" },
+          { title: "Truffle Pasta", text: "Handmade fettuccine with truffle cream and parmesan.", icon: "layers", meta: "$16.99" },
+          { title: "Crispy Fried Chicken", text: "Buttermilk-brined, golden fried, served with honey glaze.", icon: "shield", meta: "$11.99" },
+          { title: "Caesar Salad", text: "Romaine, croutons, parmesan, house-made Caesar dressing.", icon: "compass", meta: "$9.99" },
+          { title: "Tiramisu", text: "Espresso-soaked ladyfingers, mascarpone, cocoa dust.", icon: "sparkles", meta: "$8.99" },
+        ],
+        cta: { label: "View Full Menu", href: "#contact" },
+      };
+    case "featured":
+      return {
+        id,
+        type,
+        heading: "Made Fresh. Served Hot.",
+        sub: "Every dish is crafted with premium ingredients and delivered with care.",
+        items: [
+          { title: "Fresh Ingredients", text: "Sourced daily from trusted local suppliers.", icon: "compass" },
+          { title: "Chef-Crafted", text: "Every recipe perfected by our expert culinary team.", icon: "shield" },
+          { title: "Fast Delivery", text: "Hot, fresh food at your door in 30 minutes or less.", icon: "zap" },
+        ],
+        cta: { label: "Discover Our Menu", href: "#menu" },
+      };
+    case "special-offer":
+      return {
+        id,
+        type,
+        heading: "20% OFF Your First Order",
+        sub: "Fresh food is just one click away. Use code WELCOME20 at checkout.",
+        items: [],
+        cta: { label: "Order Now", href: "#contact" },
+      };
   }
 }
 
@@ -442,17 +518,19 @@ export function buildSiteModel(info: ProjectInfo): SiteModel {
   const topics = extractTopics(details);
   const sectionTypes = detectSections(info);
   const isEcommerce = isEcommerceProject(info);
+  const isFood = isFoodProject(info);
 
   const sections = sectionTypes.map((type, i) => buildSection(type, brand, details, topics, i));
 
   const sectionNav = sections
-    .filter((s) => s.type !== "hero" && s.type !== "contact")
+    .filter((s) => s.type !== "hero" && s.type !== "contact" && s.type !== "special-offer")
     .map((s) => ({
       label: navLabel(s.type),
       href: s.type === "products" ? "/products" : `#${s.id}`,
     }))
-    .slice(0, 4);
+    .slice(0, 5);
   const nav = [
+    { label: "Home", href: "#hero" },
     ...sectionNav,
     { label: "Contact", href: "#contact" },
     ...(isEcommerce
@@ -461,7 +539,6 @@ export function buildSiteModel(info: ProjectInfo): SiteModel {
           { label: "Track order", href: "/order-tracking" },
         ]
       : []),
-    { label: "Blog", href: "/blog" },
   ];
 
   const blog = buildBlogPosts(brand, topics, sections.find((s) => s.type === "hero")?.sub ?? "");
@@ -475,6 +552,7 @@ export function buildSiteModel(info: ProjectInfo): SiteModel {
     blog,
     products: isEcommerce ? buildProducts(brand, topics) : [],
     isEcommerce,
+    isFood,
     whatsapp,
     whatsappDigits: whatsapp.replace(/\D/g, ""),
     calendly: "https://calendly.com/your-handle",
@@ -501,6 +579,14 @@ function navLabel(type: SectionType): string {
       return "Pricing";
     case "faq":
       return "FAQ";
+    case "categories":
+      return "Categories";
+    case "menu":
+      return "Menu";
+    case "featured":
+      return "About";
+    case "special-offer":
+      return "Offers";
     default:
       return type.charAt(0).toUpperCase() + type.slice(1);
   }

@@ -55,7 +55,11 @@ export type SectionType =
   | "pricing"
   | "faq"
   | "products"
-  | "contact";
+  | "contact"
+  | "categories"
+  | "menu"
+  | "featured"
+  | "special-offer";
 
 export interface ProjectInfo {
   name: string;
@@ -189,6 +193,7 @@ export interface SiteModel {
   blog: BlogPost[];
   products: ShopProduct[];
   isEcommerce: boolean;
+  isFood: boolean;
   whatsapp: string;
   whatsappDigits: string;
   calendly: string;
