@@ -47,6 +47,37 @@ function esc(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return h;
+}
+
+function placeholderImg(seed: string, w: number, h: number): string {
+  const palettes = [
+    ["#6366f1", "#a855f7"], ["#0ea5e9", "#06b6d4"], ["#ec4899", "#f43f5e"],
+    ["#f59e0b", "#f97316"], ["#10b981", "#14b8a6"], ["#8b5cf6", "#a78bfa"],
+    ["#3b82f6", "#2563eb"], ["#ef4444", "#dc2626"], ["#14b8a6", "#2dd4bf"],
+    ["#f97316", "#fb923c"],
+  ];
+  const [c1, c2] = palettes[Math.abs(hashStr(seed)) % palettes.length];
+  const letter = seed.charAt(0).toUpperCase();
+  const label = seed.length > 16 ? seed.substring(0, 16) + "…" : seed;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <defs><linearGradient id="g${Math.abs(hashStr(seed))}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/>
+    </linearGradient></defs>
+    <rect width="${w}" height="${h}" rx="12" fill="url(#g${Math.abs(hashStr(seed))})"/>
+    <circle cx="${w * 0.75}" cy="${h * 0.25}" r="${Math.min(w, h) * 0.18}" fill="rgba(255,255,255,.1)"/>
+    <circle cx="${w * 0.2}" cy="${h * 0.8}" r="${Math.min(w, h) * 0.25}" fill="rgba(255,255,255,.07)"/>
+    <rect x="${w * 0.08}" y="${h * 0.65}" width="${w * 0.35}" height="6" rx="3" fill="rgba(255,255,255,.2)"/>
+    <rect x="${w * 0.08}" y="${h * 0.75}" width="${w * 0.25}" height="6" rx="3" fill="rgba(255,255,255,.12)"/>
+    <text x="50%" y="44%" font-family="system-ui,-apple-system,sans-serif" font-size="${Math.max(18, Math.min(36, w / 10))}" font-weight="700" fill="rgba(255,255,255,.85)" text-anchor="middle">${esc(letter)}</text>
+    <text x="50%" y="58%" font-family="system-ui,-apple-system,sans-serif" font-size="${Math.max(10, Math.min(14, w / 28))}" fill="rgba(255,255,255,.55)" text-anchor="middle">${esc(label)}</text>
+  </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Lightweight EN/AR dictionary for the preview (UI chrome only —       */
 /* user-authored headings keep their own text).                         */
@@ -116,6 +147,7 @@ function renderHero(s: SiteSection, model: SiteModel, tokens: DesignTokens): str
       <span class="pill">${svgIcon("sparkles")} <span data-i18n="trusted">${esc(tn("trusted"))}</span></span>
       <h1>${esc(s.heading)}</h1>
       <p class="lead">${esc(s.sub || "")}</p>
+      <img src="${placeholderImg(model.brand, 800, 320)}" alt="${esc(model.brand)}" class="hero-banner-img" />
       ${ctas}
       ${stats}
     </section>`;
@@ -138,6 +170,7 @@ function renderHero(s: SiteSection, model: SiteModel, tokens: DesignTokens): str
       ${stats}
     </div>
     <div class="hero-visual">
+      <img src="${placeholderImg(model.brand, 560, 420)}" alt="${esc(model.brand)}" class="hero-img" />
       <div class="hero-card">
         <div class="hero-card-top">
           <span class="chip chip-dot"><span data-i18n="open_new">${esc(tn("open_new"))}</span></span>
@@ -168,6 +201,7 @@ function renderAbout(s: SiteSection): string {
         ${s.items
           .map(
             (item) => `<div class="card card-soft">
+              <img src="${placeholderImg(item.title, 360, 160)}" alt="${esc(item.title)}" class="card-img" />
               <div class="icon-badge">${svgIcon(item.icon)}</div>
               <h3>${esc(item.title)}</h3>
               <p>${esc(item.text)}</p>
@@ -192,6 +226,7 @@ function renderServices(s: SiteSection): string {
         ${s.items
           .map(
             (item) => `<div class="card">
+              <img src="${placeholderImg(item.title, 360, 160)}" alt="${esc(item.title)}" class="card-img" />
               <div class="icon-badge">${svgIcon(item.icon)}</div>
               <h3>${esc(item.title)}</h3>
               <p>${esc(item.text)}</p>
@@ -215,6 +250,7 @@ function renderCourses(s: SiteSection): string {
         ${s.items
           .map(
             (item) => `<a class="card card-link" href="#contact">
+              <img src="${placeholderImg(item.title, 360, 160)}" alt="${esc(item.title)}" class="card-img" />
               <div class="card-top">
                 <div class="icon-badge">${svgIcon(item.icon)}</div>
                 ${item.meta ? `<span class="tag">${esc(item.meta)}</span>` : ""}
@@ -242,7 +278,7 @@ function renderPortfolio(s: SiteSection): string {
         ${s.items
           .map(
             (item, i) => `<div class="card">
-              <div class="card-media">${svgIcon(item.icon)}<span class="card-index">0${i + 1}</span></div>
+              <img src="${placeholderImg(item.title, 400, 220)}" alt="${esc(item.title)}" class="card-img" />
               <h3>${esc(item.title)}</h3>
               <p>${esc(item.text)}</p>
             </div>`
@@ -268,7 +304,7 @@ function renderTestimonials(s: SiteSection): string {
               <div class="stars">${svgIcon("star")}${svgIcon("star")}${svgIcon("star")}${svgIcon("star")}${svgIcon("star")}</div>
               <blockquote>&ldquo;${esc(item.text)}&rdquo;</blockquote>
               <figcaption>
-                <span class="avatar">${esc(item.title.charAt(0).toUpperCase())}</span>
+                <img src="${placeholderImg(item.title, 48, 48)}" alt="${esc(item.title)}" class="avatar-img" />
                 <div><b>${esc(item.title)}</b>${item.meta ? `<small>${esc(item.meta)}</small>` : ""}</div>
               </figcaption>
             </figure>`
@@ -735,6 +771,10 @@ p { color: var(--ink-soft); }
 .hero-card-grid span { font-size: 12px; color: rgba(255,255,255,.7); }
 
 /* Portfolio media */
+.hero-img { display: block; width: 100%; border-radius: 20px; box-shadow: 0 20px 50px -15px rgba(15,23,42,.25); margin-bottom: 16px; }
+.hero-banner-img { display: block; width: 100%; max-width: 800px; margin: 32px auto 0; border-radius: 16px; box-shadow: 0 20px 50px -15px rgba(15,23,42,.2); }
+.card-img { display: block; width: 100%; height: 180px; object-fit: cover; border-radius: 12px; margin-bottom: 16px; }
+.avatar-img { display: block; width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-soft); }
 .card-media { position: relative; display: flex; align-items: center; justify-content: center; height: 144px; border-radius: 12px; background: linear-gradient(to bottom right, rgba(var(--accent-rgb),.25), var(--paper) 70%, rgba(var(--accent-rgb),.1)); color: var(--accent); margin-bottom: 20px; }
 .card-media svg { width: 40px; height: 40px; }
 .card-index { position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,.85); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }

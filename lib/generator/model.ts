@@ -217,12 +217,13 @@ function buildSection(
   const brandLabel = brand || "Our organisation";
 
   switch (type) {
-    case "hero":
+    case "hero": {
+      const subFromDetails = detailSentence(details, 80) || `Discover how ${brandLabel} delivers quality, care and real results.`;
       return {
         id,
         type,
-        heading: detailSentence(details, 40) || `${brand} — excellence in everything we do.`,
-        sub: detailSentence(details, 0) || `Discover how ${brandLabel} delivers quality, care and real results.`,
+        heading: `${brand} — ${topics.length > 0 ? topics.slice(0, 3).join(", ") : "excellence in everything we do"}`,
+        sub: subFromDetails,
         items: [],
         stats: [
           { value: "500+", label: "People served" },
@@ -232,6 +233,7 @@ function buildSection(
         cta: { label: "Get started", href: "#contact" },
         ctaSecondary: { label: "Explore services", href: "#services" },
       };
+    }
     case "about":
       return {
         id,
